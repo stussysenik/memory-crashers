@@ -30,16 +30,22 @@ type
     obj*: string
 
   Scene* = enum
-    SceneTitle, SceneAcademy, SceneArena, ScenePalace, SceneDaily
+    SceneHome, SceneLearn, ScenePractice, SceneDaily, SceneSpeedCards, SceneBrowse
 
-  ArenaPhase* = enum
-    ArenaSetup, ArenaMemorize, ArenaRecall, ArenaResults
+  BrowseView* = enum
+    BrowseGrid, BrowseSuit, BrowseStage
 
-  AcademyMode* = enum
-    AcademyFlashcard, AcademyQuiz
+  SpeedPhase* = enum
+    SpeedReady, SpeedCountdown, SpeedMemorize, SpeedRecall, SpeedResults
 
-  Difficulty* = enum
-    Easy, Medium, Hard, Insane
+  LearnPhase* = enum
+    LearnStageSelect, LearnStudy, LearnQuiz, LearnDrill, LearnStageComplete
+
+  PracticePhase* = enum
+    PracticeSetup, PracticeMemorize, PracticeRecall, PracticeResults
+
+  PerformanceTier* = enum
+    TierBeginner, TierIntermediate, TierAdvanced, TierChampion
 
   EaseKind* = enum
     EaseLinear, EaseInQuad, EaseOutQuad, EaseInOutQuad,
@@ -53,6 +59,14 @@ type
     endVal*: float32
     ease*: EaseKind
     current*: float32
+
+  FloatingText* = object
+    active*: bool
+    text*: string
+    pos*: Vector2
+    life*: float32
+    maxLife*: float32
+    color*: Color
 
   Particle* = object
     active*: bool
@@ -87,6 +101,16 @@ type
     screenShake*: float32
     screenShakeIntensity*: float32
     particles*: ParticleSystem
+    floatingTexts*: seq[FloatingText]
+    levelUpTimer*: float32
+
+  StageProgress* = object
+    unlocked*: bool
+    completed*: bool
+    cardsStudied*: int
+    quizScore*: int
+    quizTotal*: int
+    drillBestTime*: float32
 
   PlayerData* = object
     xp*: int
@@ -95,33 +119,30 @@ type
     bestStreak*: int
     lastPlayDate*: int  # day number
     cardMastery*: array[52, int]  # 0-5 mastery per card
-    arenaHighScores*: array[4, int]  # per difficulty
+    arenaHighScores*: array[4, int]  # legacy, kept for compat
     dailyCompleted*: bool
     totalCardsStudied*: int
     totalQuizCorrect*: int
     totalQuizAttempts*: int
+    # New fields for learning-first redesign
+    stageProgress*: array[7, StageProgress]
+    currentStage*: int
+    practiceBestTimes*: array[4, float32]    # best time per card count (5,13,26,52)
+    practiceBestAccuracy*: array[4, float32] # best accuracy per card count
+    totalDrillsCompleted*: int
+    # Speed Cards fields
+    speedBestTime*: float32
+    speedBestMemorizeTime*: float32
+    speedBestAccuracy*: float32
+    speedAttempts*: int
+    # Multi-deck fields
+    multiDeckBestTimes*: array[5, float32]     # 1-5 decks
+    multiDeckBestAccuracy*: array[5, float32]
 
-  # Palace types
-  RoomKind* = enum
-    RoomKitchen, RoomBedroom, RoomGarden, RoomLibrary
-
-  Station* = object
-    pos*: Vector2
-    cards*: array[3, int]  # card indices, -1 = empty
-    filled*: bool
-
-  Room* = object
-    kind*: RoomKind
-    stations*: array[3, Station]
-    exits*: array[4, int]  # N,E,S,W -> room index, -1 = wall
-
-  PalaceKnight* = object
-    pos*: Vector2
-    targetPos*: Vector2
-    moving*: bool
-    frame*: int
-    frameTimer*: float32
-    direction*: int  # 0=down, 1=up, 2=left, 3=right
+  MistakeRecord* = object
+    position*: int
+    pickedCardIdx*: int
+    correctCardIdx*: int
 
 const
   GameWidth* = 320
@@ -131,21 +152,9 @@ const
   CardHeight* = 40
   MaxParticles* = 200
 
-proc difficultyCardCount*(d: Difficulty): int =
-  case d
-  of Easy: 5
-  of Medium: 13
-  of Hard: 26
-  of Insane: 52
+  PracticeCardCounts*: array[4, int] = [5, 13, 26, 52]
 
-proc difficultyName*(d: Difficulty): string =
-  case d
-  of Easy: "Easy (5)"
-  of Medium: "Medium (13)"
-  of Hard: "Hard (26)"
-  of Insane: "Insane (52)"
-
-proc cardIndex*(suit: Suit, rank: Rank): int =
+proc cardIndex*(suit: Suit; rank: Rank): int =
   suit.ord * 13 + rank.ord
 
 proc cardIndex*(c: Card): int =
@@ -180,3 +189,41 @@ proc suitChar*(s: Suit): string =
 proc suitColor*(s: Suit): bool =
   ## Returns true if red suit
   s == Hearts or s == Diamonds
+
+proc tierForTime*(secsPerCard: float32): PerformanceTier =
+  if secsPerCard < 1.0: TierChampion
+  elif secsPerCard < 2.0: TierAdvanced
+  elif secsPerCard < 5.0: TierIntermediate
+  else: TierBeginner
+
+proc tierName*(tier: PerformanceTier): string =
+  case tier
+  of TierBeginner: "BEGINNER"
+  of TierIntermediate: "INTERMEDIATE"
+  of TierAdvanced: "ADVANCED"
+  of TierChampion: "CHAMPION"
+
+proc practiceCountIndex*(count: int): int =
+  ## Maps card count to index in practiceBest arrays
+  case count
+  of 5: 0
+  of 13: 1
+  of 26: 2
+  of 52: 3
+  else: 0
+
+proc suggestedCardCount*(pd: PlayerData): int =
+  ## Suggest practice card count based on mastery
+  var mastered = 0
+  for m in pd.cardMastery:
+    if m >= 3: mastered += 1
+  if mastered < 12: 5
+  elif mastered < 26: 13
+  elif mastered < 40: 26
+  else: 52
+
+proc masteredCardCount*(pd: PlayerData): int =
+  var count = 0
+  for m in pd.cardMastery:
+    if m >= 3: count += 1
+  count

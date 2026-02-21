@@ -1,7 +1,7 @@
-## Easing functions, tweens, and particle system
+## Easing functions, tweens, particle system, and floating text
 
 import raylib
-import types, palette
+import types, palette, design
 import std/math
 
 # --- Easing functions ---
@@ -129,3 +129,39 @@ proc drawParticles*(ps: ParticleSystem) =
     let sz = int32(p.size * (p.life / p.maxLife))
     if sz > 0:
       drawRectangle(int32(p.pos.x), int32(p.pos.y), sz, sz, col)
+
+# --- Floating Text ---
+
+const MaxFloatingTexts* = 20
+
+proc spawnFloatingText*(texts: var seq[FloatingText]; text: string;
+                        x, y: float32; color: Color; life: float32 = 1.2) =
+  # Reuse inactive slot
+  for ft in texts.mitems:
+    if not ft.active:
+      ft = FloatingText(active: true, text: text,
+        pos: Vector2(x: x, y: y), life: life, maxLife: life, color: color)
+      return
+  if texts.len < MaxFloatingTexts:
+    texts.add(FloatingText(active: true, text: text,
+      pos: Vector2(x: x, y: y), life: life, maxLife: life, color: color))
+
+proc updateFloatingTexts*(texts: var seq[FloatingText]; dt: float32) =
+  for ft in texts.mitems:
+    if not ft.active: continue
+    ft.life -= dt
+    if ft.life <= 0:
+      ft.active = false
+      continue
+    ft.pos.y -= 20.0 * dt  # Float upward
+
+proc drawFloatingTexts*(texts: seq[FloatingText]) =
+  for ft in texts:
+    if not ft.active: continue
+    let alpha = uint8(ft.life / ft.maxLife * 255.0)
+    let col = Color(r: ft.color.r, g: ft.color.g, b: ft.color.b, a: alpha)
+    let textW = measureText(ft.text, FontSmall)
+    let x = int32(ft.pos.x) - textW div 2
+    # Shadow
+    drawText(ft.text, x + 1, int32(ft.pos.y) + 1, FontSmall, PalBlack)
+    drawText(ft.text, x, int32(ft.pos.y), FontSmall, col)

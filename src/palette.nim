@@ -95,3 +95,53 @@ const
   PalError* = Pal[25]
   PalTextLight* = Pal[31]
   PalTextDark* = Pal[0]
+
+  # Semantic color tokens for design system
+  ColBgPrimary* = Pal[1]     # Navy
+  ColBgSecondary* = Pal[2]   # Purple Dark
+  ColTextPrimary* = Pal[31]  # White
+  ColTextSecondary* = Pal[30] # Light Gray
+  ColTextAccent* = Pal[7]    # Gold
+
+  ColBtnPrimary* = Pal[10]   # Green
+  ColBtnSecondary* = Pal[18] # Blue
+  ColBtnDanger* = Pal[25]    # Red
+
+  ColCorrect* = Pal[10]      # Green
+  ColWrong* = Pal[25]        # Red
+  ColHint* = Pal[15]         # Cyan
+
+  ColSpeedGold* = Pal[7]   # Gold accent for Speed Cards mode
+
+  # Stage colors (one per learning stage)
+  ColStage1* = Pal[7]        # Gold (face cards)
+  ColStage2* = Pal[25]       # Red (hearts)
+  ColStage3* = Pal[19]       # Sky Blue (diamonds)
+  ColStage4* = Pal[10]       # Green (clubs)
+  ColStage5* = Pal[28]       # Gray Dark (spades)
+  ColStage6* = Pal[22]       # Magenta (half deck)
+  ColStage7* = Pal[6]        # Orange (full deck)
+
+  StageColors*: array[7, Color] = [
+    ColStage1, ColStage2, ColStage3, ColStage4,
+    ColStage5, ColStage6, ColStage7,
+  ]
+
+  # Mastery colors (gray to green gradient)
+  ColMastery0* = Pal[28]     # Gray Dark (new)
+  ColMastery1* = Pal[25]     # Red (seen)
+  ColMastery2* = Pal[6]      # Orange (learning)
+  ColMastery3* = Pal[7]      # Gold (familiar)
+  ColMastery4* = Pal[11]     # Lime (confident)
+  ColMastery5* = Pal[10]     # Green (mastered)
+
+  MasteryColors*: array[6, Color] = [
+    ColMastery0, ColMastery1, ColMastery2,
+    ColMastery3, ColMastery4, ColMastery5,
+  ]
+
+proc masteryColor*(level: int): Color =
+  if level >= 0 and level <= 5:
+    MasteryColors[level]
+  else:
+    ColMastery0

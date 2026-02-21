@@ -23,7 +23,7 @@ proc initCardTable*() =
   paoTable[cardIndex(Hearts, King)]  = PaoEntry(card: Card(suit: Hearts, rank: King),  person: "King Arthur", action: "pulling out",     obj: "sword")
 
   # Diamonds (13-25): Rich, prestigious, glamorous
-  paoTable[cardIndex(Diamonds, Ace)]   = PaoEntry(card: Card(suit: Diamonds, rank: Ace),   person: "Trump",       action: "pointing at",     obj: "gold tower")
+  paoTable[cardIndex(Diamonds, Ace)]   = PaoEntry(card: Card(suit: Diamonds, rank: Ace),   person: "Moneybags",   action: "pointing at",     obj: "gold tower")
   paoTable[cardIndex(Diamonds, Two)]   = PaoEntry(card: Card(suit: Diamonds, rank: Two),   person: "Midas",       action: "touching",        obj: "golden apple")
   paoTable[cardIndex(Diamonds, Three)] = PaoEntry(card: Card(suit: Diamonds, rank: Three), person: "Scrooge",     action: "diving into",     obj: "coin pile")
   paoTable[cardIndex(Diamonds, Four)]  = PaoEntry(card: Card(suit: Diamonds, rank: Four),  person: "Gatsby",      action: "toasting with",   obj: "champagne")
@@ -76,6 +76,14 @@ proc shuffleDeck*(deck: var seq[int]) =
   for i in countdown(deck.len - 1, 1):
     let j = getRandomValue(0, int32(i))
     swap(deck[i], deck[j])
+
+proc newMultiDeck*(deckCount: int): seq[int] =
+  ## Creates deckCount shuffled copies of 52 cards concatenated
+  result = @[]
+  for d in 0..<deckCount:
+    var deck = newDeck()
+    shuffleDeck(deck)
+    result.add(deck)
 
 proc shuffleDeckSeeded*(deck: var seq[int], seed: int) =
   setRandomSeed(uint32(seed))

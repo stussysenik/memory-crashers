@@ -1,0 +1,29 @@
+# Nim build artifacts
+memory_crashers
+nimcache/
+*.exe
+*.o
+*.a
+
+# Web build output
+public/index.html
+public/index.js
+public/index.wasm
+public/index.data
+
+# Save data
+save.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Claude
+.claude/

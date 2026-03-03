@@ -1,0 +1,85 @@
+Repository: memorize-deck-of-cards
+Generated: 2026-03-03
+
+Source: memory_crashers.nim
+
+## Memory Crashers - A retro pixel-art card memorization game
+## Using PAO (Person-Action-Object) system
+## Learning-first redesign: Home -> Learn / Practice / Speed / Daily
+import raylib
+import std/sequtils
+import types, palette, design, renderer, animation, ui, input_manager, cards, storage, tutorial
+import scenes/home_scene, scenes/learn_scene, scenes/practice_scene,
+       scenes/daily_scene, scenes/speed_scene, scenes/browse_scene
+when defined(emscripten):
+  type EmCallbackFunc = proc() {.cdecl.}
+  proc emscriptenSetMainLoop(f: EmCallbackFunc; fps, simulateInfiniteLoop: int32) {.
+      cdecl, importc: "emscripten_set_main_loop", header: "<emscripten.h>".}
+var
+  game*: GameState
+  playerData*: PlayerData
+proc changeScene*(target: Scene) =
+  if game.transition == TransNone:
+    game.nextScene = target
+    game.transition = TransFadeOut
+    game.transitionTimer = 0
+proc triggerShake*(intensity: float32 = 3.0; duration: float32 = 0.2) =
+  game.screenShake = duration
+  game.screenShakeIntensity = intensity
+proc initGame() =
+  game = GameState(
+    scene: SceneHome,
+    nextScene: SceneHome,
+    transition: TransNone,
+    transitionTimer: 0,
+    transitionDuration: TransitionTime,
+    screenShake: 0,
+    screenShakeIntensity: 0,
+    particles: ParticleSystem(particles: @[]),
+    floatingTexts: @[],
+    levelUpTimer: 0,
+  )
+  playerData = loadPlayerData()
+  # Wire up scene callbacks
+  home_scene.changeSceneProc = proc(s: Scene) = changeScene(s)
+  learn_scene.changeSceneProc = proc(s: Scene) = changeScene(s)
+  practice_scene.changeSceneProc = proc(s: Scene) = changeScene(s)
+  daily_scene.changeSceneProc = proc(s: Scene) = changeScene(s)
+  speed_scene.changeSceneProc = proc(s: Scene) = changeScene(s)
+  browse_scene.changeSceneProc = proc(s: Scene) = changeScene(s)
+  learn_scene.triggerShakeProc = proc(intensity: float32; duration: float32) =
+    triggerShake(intensity, duration)
+  practice_scene.triggerShakeProc = proc(intensity: float32; duration: float32) =
+    triggerShake(intensity, duration)
+  daily_scene.triggerShakeProc = proc(intensity: float32; duration: float32) =
+    triggerShake(intensity, duration)
+  speed_scene.triggerShakeProc = proc(intensity: float32; duration: float32) =
+    triggerShake(intensity, duration)
+  learn_scene.gameParticles = addr game.particles
+  practice_scene.gameParticles = addr game.particles
+  daily_scene.gameParticles = addr game.particles
+  speed_scene.gameParticles = addr game.particles
+  home_scene.playerDataPtr = addr playerData
+  learn_scene.playerDataPtr = addr playerData
+  practice_scene.playerDataPtr = addr playerData
+  daily_scene.playerDataPtr = addr playerData
+  speed_scene.playerDataPtr = addr playerData
+  browse_scene.playerDataPtr = addr playerData
+  # Floating text pointers
+  home_scene.gameFloatingTexts = addr game.floatingTexts
+  learn_scene.gameFloatingTexts = addr game.floatingTexts
+  practice_scene.gameFloatingTexts = addr game.floatingTexts
+  daily_scene.gameFloatingTexts = addr game.floatingTexts
+  speed_scene.gameFloatingTexts = addr game.floatingTexts
+  browse_scene.gameFloatingTexts = addr game.floatingTexts
+  initHomeScene()
+proc updateGame(dt: float32) =
+  # TAB toggles tutorial overlay
+  if isKeyPressed(Tab):
+    toggleTutorial(game.scene)
+  # If tutorial is open, only update tutorial
+  if tutorialVisible:
+    updateTutorial()
+    return
+  # Update screen shake
+  if game.screenShake > 0:
